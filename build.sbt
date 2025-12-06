@@ -21,6 +21,10 @@ lazy val root = (project in file("."))
     },
     libraryDependencies ++= Seq("org.scalafx" %% "scalafx" % "21.0.0-R32")
   )
+
+libraryDependencies += "com.github.tototoshi" %% "scala-csv" % "1.3.10"
+
+scalacOptions ++= Seq("-deprecation", "-feature")
 //enable for sbt-assembly
 //assembly / assemblyMergeStrategy := {
 //  case PathList("META-INF", xs @ _*) => MergeStrategy.discard // Discard all META-INF files

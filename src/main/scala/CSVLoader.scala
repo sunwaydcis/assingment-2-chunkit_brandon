@@ -1,47 +1,49 @@
-import java.nio.file.{Files, Paths}
-import java.nio.charset.StandardCharsets
+package hoteldata
 
-case class Booking(
-                    country: String,
-                    hotel: String,
-                    price: Double,
-                    discount: Double,
-                    profitMargin: Double,
-                    rooms: Int
-                  )
+import com.github.tototoshi.csv.*
+import java.io.File
 
-object CSVLoader:
 
-  def loadBookings(path: String): List[Booking] =
-    val bytes = Files.readAllBytes(Paths.get(path))
-    val content = new String(bytes, StandardCharsets.UTF_8).replaceAll("\uFEFF", "")
+// Central object for loading CSV hotel data.
+object DataSource:
 
-    val lines = content.split("\r?\n").toList
 
-    if lines.isEmpty then
-      println("CSV file is empty!")
-      return List()
+  // Reads the CSV file and returns all rows as maps.
+  def load(path: String): List[Map[String, String]] =
+    val file = new File(path)
 
-    lines.drop(1).flatMap { line =>
-      val cols = line.split(",").map(_.trim)
+    if !file.exists() then
+      println(s"⚠ File not found: $path")
+      return Nil
 
-      if cols.length < 24 then
-        println(s"Skipping invalid row (too few columns): $line")
-        None
-      else
-        try
-          Some(
-            Booking(
-              country = cols(6),
-              hotel = cols(16),
-              price = cols(20).replace("%", "").toDouble,
-              discount = cols(21).replace("%", "").toDouble / 100,
-              profitMargin = cols(23).toDouble,
-              rooms = cols(15).toInt
-            )
-          )
-        catch
-          case e: Throwable =>
-            println(s"Skipping invalid row (parse error): $line -> ${e.getMessage}")
-            None
-    }
+    val reader = CSVReader.open(file)
+
+    // Use allWithHeaders() to convert each row into (header -> value)
+    val rows =
+      try reader.allWithHeaders()
+      catch case e: Throwable =>
+        println(s"⚠ Error reading CSV: ${e.getMessage}")
+        Nil
+      finally
+        reader.close()
+
+    rows
+  end load
+
+  // Safe numeric conversions for later analyses.
+  object Conversions:
+    def toDouble(v: String): Double =
+      val cleaned = v.trim.replace("%", "")
+      try cleaned.toDouble
+      catch case _ => 0.0
+
+    def toInt(v: String): Int =
+      try v.trim.toInt
+      catch case _ => 0
+  end Conversions
+
+  trait ReportBlueprint:
+    def execute(data: List[Map[String, String]]): Unit
+  end ReportBlueprint
+
+end DataSource
